@@ -13,9 +13,9 @@ fn make_vec(start: i32) -> Vec<i32> {
 }
 
 // print a vector with Closures
-fn print_vec(v: &Vec<i32>, f: &Fn(i32) -> i32) {
+fn print_vec(g: &str, v: &Vec<i32>, f: &Fn(i32) -> i32) {
     // output the first 5 number, in `v: &Vec<i32>`
-    print!("fear_channels() Vector_{}: ", v[0]);
+    print!("{} Vector_{}: ", g, v[0]);
     for i in 0..N {
         print!("{} ", f(v[i as usize]));
     }
@@ -38,26 +38,30 @@ fn fear_channels() {
     // received from `channels`
     for _ in 0..N {
         let rv = rx.recv().unwrap();
-        print_vec(&rv, &|x| x);
+        print_vec("fear_channels()", &rv, &|x| x);
     }
 }
 
 fn fear_locks() {
-    let data = Arc::new(Mutex::new(0));
+    let data = Arc::new(Mutex::new(0_i32));
 
     let (tx, rx) = channel();
     for _ in 0..N {
-        let (data, tx) = (data.clone(), tx.clone());
+        let (ddata, ttx) = (data.clone(), tx.clone());
         thread::spawn(move || {
-            let mut data = data.lock().unwrap();
-            *data += 1;
-            if *data == N {
-                tx.send(()).unwrap();
+            let mut mdata = ddata.lock().unwrap();
+            *mdata += 1;
+            if *mdata == N as i32 {
+                ttx.send(N as i32).unwrap();
+            } else {
+                ttx.send(*mdata).unwrap();
             }
         });
     }
 
-    rx.recv().unwrap();
+    for _ in 0..N {
+        println!("fear_locks() {}", rx.recv().unwrap());
+    }
 }
 
 fn main() {
